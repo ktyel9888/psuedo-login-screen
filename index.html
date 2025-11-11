@@ -4,7 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PII 유출 탐지 스캐너 (Demo)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com">
+        // 팝업을 여는 함수
+function showErrorPopup(message) {
+  const overlay = document.getElementById('error-overlay');
+  const messageElement = document.getElementById('error-message-text');
+  
+  // 오류 메시지 설정 (기본값 또는 특정 메시지)
+  messageElement.textContent = message || '알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+  
+  // 'show' 클래스를 추가하여 팝업을 보이게 함
+  overlay.classList.add('show');
+}
+
+// 팝업을 닫는 함수
+function closeErrorPopup() {
+  const overlay = document.getElementById('error-overlay');
+  
+  // 'show' 클래스를 제거하여 팝업을 숨김
+  overlay.classList.remove('show');
+}
+
+// 오버레이(배경) 클릭 시 닫기 (선택 사항)
+window.addEventListener('click', function(event) {
+  const overlay = document.getElementById('error-overlay');
+  if (event.target == overlay) {
+    closeErrorPopup();
+  }
+});
+    </script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         .drop-zone { border: 2px dashed #cbd5e1; transition: all 0.3s ease; }
@@ -13,6 +41,66 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         /* 모달 스타일 */
         .modal-backdrop { background-color: rgba(0, 0, 0, 0.5); }
+        /* 팝업 배경 (화면 전체를 어둡게 함) */
+.modal-overlay {
+  display: none; /* 평소에는 숨김 */
+  position: fixed; /* 화면에 고정 */
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6); /* 반투명 검은색 */
+  
+  /* 팝업을 중앙에 위치시키기 위한 Flexbox */
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 팝업 상자 본체 */
+.modal-content {
+  background-color: #ffffff;
+  padding: 24px 32px;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  color: #d93025; /* 오류 색상 */
+}
+
+.modal-content p {
+  font-size: 16px;
+  color: #333;
+  line-height: 1.5;
+}
+
+/* 닫기 버튼 (X) */
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 28px;
+  font-weight: bold;
+  color: #aaa;
+  cursor: pointer;
+}
+
+.close-button:hover {
+  color: #333;
+}
+
+/* 팝업을 보여주기 위한 클래스 (JS에서 사용) */
+.modal-overlay.show {
+  display: flex; /* Flexbox로 중앙 정렬 */
+}
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen">
@@ -210,5 +298,12 @@
             }, 300); // 애니메이션 시간
         }
     </script>
+    <div id="error-overlay" class="modal-overlay">
+  <div class="modal-content">
+    <span class="close-button" onclick="closeErrorPopup()">&times;</span>
+    <h2>🚨 스캔 오류</h2>
+    <p id="error-message-text">오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>
+  </div>
+</div>
 </body>
 </html>
