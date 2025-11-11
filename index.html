@@ -3,307 +3,226 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PII 유출 탐지 스캐너 (Demo)</title>
-    <script src="https://cdn.tailwindcss.com">
-        // 팝업을 여는 함수
-function showErrorPopup(message) {
-  const overlay = document.getElementById('error-overlay');
-  const messageElement = document.getElementById('error-message-text');
-  
-  // 오류 메시지 설정 (기본값 또는 특정 메시지)
-  messageElement.textContent = message || '알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
-  
-  // 'show' 클래스를 추가하여 팝업을 보이게 함
-  overlay.classList.add('show');
-}
-
-// 팝업을 닫는 함수
-function closeErrorPopup() {
-  const overlay = document.getElementById('error-overlay');
-  
-  // 'show' 클래스를 제거하여 팝업을 숨김
-  overlay.classList.remove('show');
-}
-
-// 오버레이(배경) 클릭 시 닫기 (선택 사항)
-window.addEventListener('click', function(event) {
-  const overlay = document.getElementById('error-overlay');
-  if (event.target == overlay) {
-    closeErrorPopup();
-  }
-});
-    </script>
+    <title>보안 파일 스캐너</title>
+    
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .drop-zone { border: 2px dashed #cbd5e1; transition: all 0.3s ease; }
-        .drop-zone.dragover { border-color: #3b82f6; background-color: #eff6ff; }
-        .loader { border-top-color: #3498db; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        /* 모달 스타일 */
-        .modal-backdrop { background-color: rgba(0, 0, 0, 0.5); }
+        /* 기본 페이지 스타일 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+
+        .container {
+            text-align: center;
+            background-color: #ffffff;
+            padding: 40px 50px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #1a1a1a;
+            margin-bottom: 30px;
+        }
+
+        /* 스캔 버튼 스타일 */
+        #scan-button {
+            background-color: #007aff; /* 파란색 */
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+        }
+
+        #scan-button:hover {
+            background-color: #0056b3;
+        }
+
+        #scan-button:active {
+            transform: scale(0.98);
+        }
+
+        /* -------------------------- */
+        /* 오류 팝업 스타일 */
+        /* -------------------------- */
+
         /* 팝업 배경 (화면 전체를 어둡게 함) */
-.modal-overlay {
-  display: none; /* 평소에는 숨김 */
-  position: fixed; /* 화면에 고정 */
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.6); /* 반투명 검은색 */
-  
-  /* 팝업을 중앙에 위치시키기 위한 Flexbox */
-  display: none;
-  align-items: center;
-  justify-content: center;
-}
+        .modal-overlay {
+            position: fixed; /* 화면에 고정 */
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); /* 반투명 검은색 */
+            
+            /* 팝업을 중앙에 위치시키기 위한 Flexbox */
+            display: none; /* 평소에는 숨김 */
+            align-items: center;
+            justify-content: center;
+        }
 
-/* 팝업 상자 본체 */
-.modal-content {
-  background-color: #ffffff;
-  padding: 24px 32px;
-  border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  width: 90%;
-  max-width: 400px;
-  text-align: center;
-  position: relative;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
+        /* 팝업 상자 본체 */
+        .modal-content {
+            background-color: #ffffff;
+            padding: 24px 32px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            position: relative;
+        }
 
-.modal-content h2 {
-  margin-top: 0;
-  color: #d93025; /* 오류 색상 */
-}
+        .modal-content h2 {
+            margin-top: 0;
+            color: #d93025; /* 오류 색상 */
+        }
 
-.modal-content p {
-  font-size: 16px;
-  color: #333;
-  line-height: 1.5;
-}
+        .modal-content p {
+            font-size: 16px;
+            color: #333;
+            line-height: 1.5;
+        }
 
-/* 닫기 버튼 (X) */
-.close-button {
-  position: absolute;
-  top: 10px;
-  right: 15px;
-  font-size: 28px;
-  font-weight: bold;
-  color: #aaa;
-  cursor: pointer;
-}
+        /* 닫기 버튼 (X) */
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+        }
 
-.close-button:hover {
-  color: #333;
-}
+        .close-button:hover {
+            color: #333;
+        }
 
-/* 팝업을 보여주기 위한 클래스 (JS에서 사용) */
-.modal-overlay.show {
-  display: flex; /* Flexbox로 중앙 정렬 */
-}
+        /* 팝업을 보여주기 위한 클래스 (JS에서 사용) */
+        .modal-overlay.show {
+            display: flex; /* Flexbox로 중앙 정렬 */
+        }
     </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
-    
-    <!-- 메인 업로드 화면 -->
-    <div class="w-full max-w-2xl p-8 bg-white rounded-lg shadow-xl">
-        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">보안 파일 스캐너</h1>
-        <p class="text-center text-gray-600 mb-8">Upstage AI Agent가 파일을 스캔하여 개인정보(PII) 포함 여부를 확인합니다.</p>
+<body>
 
-        <!-- 파일 업로드 영역 -->
-        <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-2">스캔할 파일:</label>
-            <div id="dropZone" class="drop-zone w-full p-10 text-center rounded-lg cursor-pointer hover:bg-gray-50">
-                <input type="file" id="fileInput" class="hidden">
-                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                </svg>
-                <p class="mt-2 text-sm text-gray-600">스캔할 파일을 드래그 앤 드롭하거나 클릭하세요.</p>
-                <p id="fileName" class="text-sm text-blue-600 font-medium mt-2"></p>
-            </div>
-        </div>
-
-        <!-- Webhook 전송 버튼 -->
-        <div class="mb-4">
-            <button id="scanButton" onclick="scanFile()" class="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition duration-300 font-bold flex items-center justify-center">
-                <span id="buttonText">파일 스캔 시작</span>
-                <div id="loader" class="loader w-5 h-5 rounded-full border-2 border-t-blue-600 border-white ml-3 hidden"></div>
-            </button>
-        </div>
-        
-        <!-- 결과 메시지 표시 -->
-        <div id="result" class="text-center text-sm h-5"></div>
+    <div class="container">
+        <h1>보안 파일 스캐너</h1>
+        <p style="margin-top: -10px; margin-bottom: 30px; color: #555;">n8n 웹훅 테스트 페이지</p>
+        <button id="scan-button">파일 스캔 시작</button>
     </div>
 
-    <!-- PII 탐지 시 경고 팝업 (모달) -->
-    <div id="alertModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
-        <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 transform transition-all scale-95 opacity-0" id="modalContent">
-            <div class="text-center">
-                <!-- 경고 아이콘 -->
-                <div class="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-red-100 mb-4">
-                    <svg class="h-16 w-16 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.01" />
-                    </svg>
-                </div>
-                <!-- 경고 제목 -->
-                <h3 class="text-3xl font-bold text-gray-900">경고: PII 탐지</h3>
-                <!-- 경고 내용 -->
-                <div class="mt-4">
-                    <p class="text-lg text-gray-600">
-                        파일 업로드 시뮬레이션에서 개인정보(PII)가 탐지되었습니다.
-                    </p>
-                    <p class="text-md text-gray-500 mt-2">
-                        (n8n 워크플로우가 'true'를 반환했습니다.)
-                    </p>
-                </div>
-            </div>
-            <!-- 닫기 버튼 -->
-            <div class="mt-8">
-                <button onclick="closeModal()" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-300">
-                    확인 (닫기)
-                </button>
-            </div>
+    <div id="error-overlay" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeErrorPopup()">&times;</span>
+            <h2>🚨 스캔 오류</h2>
+            <p id="error-message-text">오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>
         </div>
     </div>
 
 
     <script>
-        // --- n8n Webhook URL (사용자가 제공한 URL) ---
-        const N8N_WEBHOOK_URL = "https://primary-production-b57a.up.railway.app/webhook/s3_public_test";
+        // --------------------------
+        // 팝업 제어 함수
+        // --------------------------
 
-        // --- 파일 업로드 UI 로직 ---
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const fileNameDisplay = document.getElementById('fileName');
-
-        dropZone.onclick = () => fileInput.click();
-        
-        fileInput.onchange = (e) => {
-            if (e.target.files.length > 0) {
-                fileNameDisplay.textContent = e.target.files[0].name;
-                document.getElementById('result').innerHTML = ''; // 이전 결과 초기화
-            }
-        };
-
-        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
-        dropZone.ondragleave = () => { dropZone.classList.remove('dragover'); };
-        dropZone.ondrop = (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files.length > 0) {
-                fileInput.files = e.dataTransfer.files;
-                fileNameDisplay.textContent = e.dataTransfer.files[0].name;
-                document.getElementById('result').innerHTML = ''; // 이전 결과 초기화
-            }
-        };
-
-        // --- Webhook 전송 함수 ---
-        async function scanFile() {
-            const file = fileInput.files[0];
-            const resultDiv = document.getElementById('result');
-            const scanButton = document.getElementById('scanButton');
-            const buttonText = document.getElementById('buttonText');
-            const loader = document.getElementById('loader');
+        // 팝업을 여는 함수
+        function showErrorPopup(message) {
+            const overlay = document.getElementById('error-overlay');
+            const messageElement = document.getElementById('error-message-text');
             
-            if (!file) {
-                resultDiv.innerHTML = '<span class="text-red-500">파일을 먼저 선택하세요.</span>';
-                return;
+            // 오류 메시지 설정 (기본값 또는 특정 메시지)
+            messageElement.textContent = message || '알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+            
+            // 'show' 클래스를 추가하여 팝업을 보이게 함
+            overlay.classList.add('show');
+        }
+
+        // 팝업을 닫는 함수
+        function closeErrorPopup() {
+            const overlay = document.getElementById('error-overlay');
+            
+            // 'show' 클래스를 제거하여 팝업을 숨김
+            overlay.classList.remove('show');
+        }
+
+        // 오버레이(배경) 클릭 시 닫기
+        window.addEventListener('click', function(event) {
+            const overlay = document.getElementById('error-overlay');
+            if (event.target == overlay) {
+                closeErrorPopup();
             }
+        });
 
-            // 로딩 상태 시작
-            resultDiv.innerHTML = '<span class="text-gray-500">n8n 워크플로우 실행 중... (응답 대기)</span>';
-            scanButton.disabled = true;
-            buttonText.textContent = '스캔 중...';
-            loader.classList.remove('hidden');
+        // --------------------------
+        // n8n 웹훅 호출 (핵심 로직)
+        // --------------------------
 
-            // n8n의 'Parse Event' 노드를 통과시키기 위한 '가짜 S3 이벤트' JSON
-            // 이 JSON이 'isPublic = true'를 만듭니다.
-            const fakeS3EventPayload = {
-              "detail": {
-                "eventName": "PutBucketPolicy",
-                "requestParameters": {
-                  "bucketName": "demo-bucket-for-pii",
-                  "bucketPolicy": {
-                    "Statement": [
-                      {
-                        "Effect": "Allow",
-                        "Principal": "*", // <-- 이 부분이 'isPublic = true'를 만듭니다.
-                        "Action": "s3:GetObject",
-                        "Resource": "arn:aws:s3:::demo-bucket-for-pii/*"
-                      }
-                    ]
-                  }
-                }
-              }
+        // 스캔 버튼에 클릭 이벤트 연결
+        document.getElementById('scan-button').addEventListener('click', scanFile);
+
+        async function scanFile() {
+            // n8n 웹훅 주소 (오류 로그에서 가져옴)
+            const webhookUrl = 'https://primary-production-b57a.up.railway.app/webhook/s3_public_test';
+            
+            // TODO: 실제로는 여기서 파일을 읽고 데이터를 준비해야 합니다.
+            // 지금은 n8n 워크플로우를 트리거하기 위한 테스트용 데이터를 보냅니다.
+            const testData = {
+                fileName: "test_file.txt",
+                triggeredAt: new Date().toISOString()
             };
 
+            console.log('n8n으로 웹훅 전송 시도...', webhookUrl);
+
             try {
-                // n8n Webhook으로 '가짜 S3 이벤트' JSON 전송
-                // (선택한 파일은 전송하지 않습니다. 현재 워크플로우는 파일 스캔 기능이 없습니다.)
-                const response = await fetch(N8N_WEBHOOK_URL, {
+                // n8n 서버로 fetch 요청
+                const response = await fetch(webhookUrl, {
                     method: 'POST',
+                    body: JSON.stringify(testData),
                     headers: {
                         'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(fakeS3EventPayload)
+                    }
                 });
 
                 if (!response.ok) {
-                    throw new Error(`n8n 서버 오류: ${response.statusText}`);
+                    // 서버가 2xx 상태 코드를 반환하지 않은 경우
+                    throw new Error(`서버 응답 오류: ${response.status}`);
                 }
 
-                // n8n이 반환한 JSON 결과를 파싱
-                // (수정된 워크플로우는 { "pii_detected": true } 또는 { "pii_detected": false } 를 반환)
-                const n8nResult = await response.json();
-
-                // n8n의 응답에 따라 분기
-                if (n8nResult.pii_detected === true) {
-                    // PII가 탐지되면 경고 팝업(모달) 표시
-                    resultDiv.innerHTML = '<span class="text-red-500">PII 탐지! (경고 팝업 확인)</span>';
-                    showModal();
-                } else {
-                    // PII가 없으면 성공 메시지 표시
-                    resultDiv.innerHTML = '<span class="text-green-600">스캔 완료: PII가 탐지되지 않았습니다. (안전)</span>';
-                }
+                const result = await response.json();
+                console.log("스캔 결과 (성공):", result);
+                
+                // 성공 시 (예: PII가 있든 없든 응답을 받으면)
+                alert('스캔 성공! \n' + JSON.stringify(result));
 
             } catch (error) {
+                // *** 오류 발생 시 (CORS 포함) ***
                 console.error('Error sending webhook:', error);
-                // fetch 자체가 실패한 경우 (CORS 또는 네트워크 오류)
-                resultDiv.innerHTML = `<span class="text-red-500">스캔 오류: ${error.message}. (CORS 설정 확인)</span>`;
-            } finally {
-                // 로딩 상태 종료
-                scanButton.disabled = false;
-                buttonText.textContent = '파일 스캔 시작';
-                loader.classList.add('hidden');
+                
+                let userMessage = '파일 스캔 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+                
+                // CORS 또는 네트워크 오류 감지
+                if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+                    userMessage = '스캔 서버에 연결할 수 없습니다. (CORS 또는 네트워크 오류가 의심됩니다)';
+                }
+                
+                // 우리가 만든 오류 팝업 함수 호출
+                showErrorPopup(userMessage);
             }
         }
-
-        // --- 모달(팝업) 제어 함수 ---
-        const alertModal = document.getElementById('alertModal');
-        const modalContent = document.getElementById('modalContent');
-
-        function showModal() {
-            alertModal.classList.remove('hidden');
-            setTimeout(() => {
-                modalContent.classList.remove('scale-95', 'opacity-0');
-                modalContent.classList.add('scale-100', 'opacity-100');
-            }, 50); // 부드러운 애니메이션 효과
-        }
-
-        function closeModal() {
-            modalContent.classList.add('scale-95', 'opacity-0');
-            modalContent.classList.remove('scale-100', 'opacity-100');
-            setTimeout(() => {
-                alertModal.classList.add('hidden');
-            }, 300); // 애니메이션 시간
-        }
     </script>
-    <div id="error-overlay" class="modal-overlay">
-  <div class="modal-content">
-    <span class="close-button" onclick="closeErrorPopup()">&times;</span>
-    <h2>🚨 스캔 오류</h2>
-    <p id="error-message-text">오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>
-  </div>
-</div>
+
 </body>
 </html>
