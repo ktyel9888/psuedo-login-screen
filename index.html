@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>보안 파일 스캐너</title>
+    <title>보안 파일 스캐너 (파일 선택)</title>
     
     <style>
         /* 기본 페이지 스타일 */
@@ -52,27 +52,31 @@
             transform: scale(0.98);
         }
 
+        /* 스캔 중 비활성화 스타일 */
+        #scan-button:disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+
         /* -------------------------- */
-        /* 오류 팝업 스타일 */
+        /* 오류 팝업 스타일 (이전과 동일) */
         /* -------------------------- */
 
-        /* 팝업 배경 (화면 전체를 어둡게 함) */
         .modal-overlay {
-            position: fixed; /* 화면에 고정 */
+            position: fixed;
             z-index: 1000;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.6); /* 반투명 검은색 */
-            
-            /* 팝업을 중앙에 위치시키기 위한 Flexbox */
+            background-color: rgba(0, 0, 0, 0.6);
             display: none; /* 평소에는 숨김 */
             align-items: center;
             justify-content: center;
         }
 
-        /* 팝업 상자 본체 */
         .modal-content {
             background-color: #ffffff;
             padding: 24px 32px;
@@ -95,7 +99,6 @@
             line-height: 1.5;
         }
 
-        /* 닫기 버튼 (X) */
         .close-button {
             position: absolute;
             top: 10px;
@@ -106,22 +109,19 @@
             cursor: pointer;
         }
 
-        .close-button:hover {
-            color: #333;
-        }
-
-        /* 팝업을 보여주기 위한 클래스 (JS에서 사용) */
-        .modal-overlay.show {
-            display: flex; /* Flexbox로 중앙 정렬 */
-        }
+        .close-button:hover { color: #333; }
+        .modal-overlay.show { display: flex; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <h1>보안 파일 스캐너</h1>
-        <p style="margin-top: -10px; margin-bottom: 30px; color: #555;">n8n 웹훅 테스트 페이지</p>
-        <button id="scan-button">파일 스캔 시작</button>
+        <p style="margin-top: -10px; margin-bottom: 30px; color: #555;">파일을 선택하면 스캔을 시작합니다.</p>
+        
+        <button id="scan-button">파일 선택 및 스캔 시작</button>
+        
+        <input type="file" id="file-input" style="display: none;">
     </div>
 
     <div id="error-overlay" class="modal-overlay">
@@ -134,31 +134,20 @@
 
 
     <script>
-        // --------------------------
-        // 팝업 제어 함수
-        // --------------------------
+        // --- 팝업 제어 함수 (이전과 동일) ---
 
-        // 팝업을 여는 함수
         function showErrorPopup(message) {
             const overlay = document.getElementById('error-overlay');
             const messageElement = document.getElementById('error-message-text');
-            
-            // 오류 메시지 설정 (기본값 또는 특정 메시지)
-            messageElement.textContent = message || '알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
-            
-            // 'show' 클래스를 추가하여 팝업을 보이게 함
+            messageElement.textContent = message || '알 수 없는 오류가 발생했습니다.';
             overlay.classList.add('show');
         }
 
-        // 팝업을 닫는 함수
         function closeErrorPopup() {
             const overlay = document.getElementById('error-overlay');
-            
-            // 'show' 클래스를 제거하여 팝업을 숨김
             overlay.classList.remove('show');
         }
 
-        // 오버레이(배경) 클릭 시 닫기
         window.addEventListener('click', function(event) {
             const overlay = document.getElementById('error-overlay');
             if (event.target == overlay) {
@@ -166,61 +155,99 @@
             }
         });
 
-        // --------------------------
-        // n8n 웹훅 호출 (핵심 로직)
-        // --------------------------
+        // --- ✨ 파일 선택 및 스캔 로직 (수정됨) ---
 
-        // 스캔 버튼에 클릭 이벤트 연결
-        document.getElementById('scan-button').addEventListener('click', scanFile);
+        // 1. HTML 요소 가져오기
+        const scanButton = document.getElementById('scan-button');
+        const fileInput = document.getElementById('file-input');
 
-        async function scanFile() {
-            // n8n 웹훅 주소 (오류 로그에서 가져옴)
-            const webhookUrl = 'https://primary-production-b57a.up.railway.app/webhook/s3_public_test';
+        // 2. '스캔 시작' 버튼 클릭 시, 숨겨진 'file-input'을 클릭
+        scanButton.addEventListener('click', () => {
+            // 이전에 선택한 파일이 남아있을 수 있으므로 초기화
+            fileInput.value = null; 
+            fileInput.click();
+        });
+
+        // 3. 사용자가 파일을 선택했을 때(change 이벤트) 실행
+        fileInput.addEventListener('change', async (event) => {
+            const files = event.target.files;
+
+            // 파일이 선택되지 않았으면 (예: '취소' 클릭)
+            if (files.length === 0) {
+                console.log('파일 선택이 취소되었습니다.');
+                return; // 함수 종료
+            }
+
+            const file = files[0];
+            console.log(`선택된 파일: ${file.name}`);
             
-            // TODO: 실제로는 여기서 파일을 읽고 데이터를 준비해야 합니다.
-            // 지금은 n8n 워크플로우를 트리거하기 위한 테스트용 데이터를 보냅니다.
-            const testData = {
-                fileName: "test_file.txt",
-                triggeredAt: new Date().toISOString()
+            // 버튼을 '스캔 중' 상태로 변경
+            scanButton.disabled = true;
+            scanButton.textContent = '스캔 중...';
+
+            // FileReader를 사용해 파일 내용을 텍스트로 읽기
+            const reader = new FileReader();
+
+            // 파일 읽기가 완료되면
+            reader.onload = async (e) => {
+                const fileContent = e.target.result; // 파일의 텍스트 내용
+                const dataToSend = {
+                    fileName: file.name,
+                    content: fileContent // 실제 파일 내용을 포함
+                };
+                
+                // n8n 웹훅으로 데이터 전송 시도
+                await sendToWebhook(dataToSend);
             };
 
-            console.log('n8n으로 웹훅 전송 시도...', webhookUrl);
+            // 파일 읽기 중 오류가 나면
+            reader.onerror = () => {
+                console.error('파일을 읽는 중 오류가 발생했습니다.');
+                showErrorPopup('파일을 읽는 중 오류가 발생했습니다.');
+                resetButton(); // 버튼 상태 초기화
+            };
 
+            // 파일 읽기 시작
+            reader.readAsText(file);
+        });
+
+        // 4. n8n 웹훅으로 데이터를 전송하는 함수
+        async function sendToWebhook(data) {
+            const webhookUrl = 'https://primary-production-b57a.up.railway.app/webhook/s3_public_test';
+            
             try {
-                // n8n 서버로 fetch 요청
                 const response = await fetch(webhookUrl, {
                     method: 'POST',
-                    body: JSON.stringify(testData),
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                    body: JSON.stringify(data),
+                    headers: { 'Content-Type': 'application/json' }
                 });
 
                 if (!response.ok) {
-                    // 서버가 2xx 상태 코드를 반환하지 않은 경우
                     throw new Error(`서버 응답 오류: ${response.status}`);
                 }
 
                 const result = await response.json();
                 console.log("스캔 결과 (성공):", result);
-                
-                // 성공 시 (예: PII가 있든 없든 응답을 받으면)
                 alert('스캔 성공! \n' + JSON.stringify(result));
 
             } catch (error) {
-                // *** 오류 발생 시 (CORS 포함) ***
+                // *** CORS 오류 등이 여기서 잡힘 ***
                 console.error('Error sending webhook:', error);
-                
                 let userMessage = '파일 스캔 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
-                
-                // CORS 또는 네트워크 오류 감지
                 if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
                     userMessage = '스캔 서버에 연결할 수 없습니다. (CORS 또는 네트워크 오류가 의심됩니다)';
                 }
-                
-                // 우리가 만든 오류 팝업 함수 호출
-                showErrorPopup(userMessage);
+                showErrorPopup(userMessage); // 오류 팝업 띄우기
+            } finally {
+                // 5. 성공하든 실패하든 버튼 상태를 원래대로 복구
+                resetButton();
             }
+        }
+        
+        // 6. 버튼 상태를 초기화하는 헬퍼 함수
+        function resetButton() {
+            scanButton.disabled = false;
+            scanButton.textContent = '파일 선택 및 스캔 시작';
         }
     </script>
 
